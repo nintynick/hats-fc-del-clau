@@ -18,7 +18,8 @@ export function useDelegatorContract({
   address,
   enabled = true,
 }: UseDelegatorContractOptions) {
-  // Read ownerHat and casterHat
+  // Read ownerHat and hatId (caster hat)
+  // Note: HatsFarcasterDelegator uses hatId() for casters, not casterHat()
   const { data: hatsData, isLoading: isLoadingHats } = useReadContracts({
     contracts: [
       {
@@ -29,7 +30,7 @@ export function useDelegatorContract({
       {
         address,
         abi: HATS_FARCASTER_DELEGATOR_ABI,
-        functionName: "casterHat",
+        functionName: "hatId",
       },
     ],
     query: {
@@ -38,7 +39,7 @@ export function useDelegatorContract({
   });
 
   const ownerHat = hatsData?.[0]?.result as bigint | undefined;
-  const casterHat = hatsData?.[1]?.result as bigint | undefined;
+  const casterHat = hatsData?.[1]?.result as bigint | undefined; // hatId() returns the caster hat
 
   // Read fid from IdRegistry
   const { data: fid, isLoading: isLoadingFid } = useReadContract({

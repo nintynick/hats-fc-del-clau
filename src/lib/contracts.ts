@@ -9,7 +9,7 @@ export const HATS_FARCASTER_DELEGATOR_ABI = [
     outputs: [{ name: "", type: "uint256" }],
   },
   {
-    name: "casterHat",
+    name: "hatId",
     type: "function",
     stateMutability: "pure",
     inputs: [],
@@ -119,7 +119,7 @@ export const HATS_FARCASTER_DELEGATOR_ABI = [
   },
 ] as const;
 
-// Hats Protocol ABI - minimal for checking hat wearer
+// Hats Protocol ABI - for checking hat wearer and minting
 export const HATS_ABI = [
   {
     name: "isWearerOfHat",
@@ -147,6 +147,54 @@ export const HATS_ABI = [
       { name: "mutable_", type: "bool" },
       { name: "active", type: "bool" },
     ],
+  },
+  {
+    name: "mintHat",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "_hatId", type: "uint256" },
+      { name: "_wearer", type: "address" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    name: "transferHat",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "_hatId", type: "uint256" },
+      { name: "_from", type: "address" },
+      { name: "_to", type: "address" },
+    ],
+    outputs: [],
+  },
+  {
+    name: "isAdminOfHat",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "_user", type: "address" },
+      { name: "_hatId", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    name: "getHatLevel",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "_hatId", type: "uint256" }],
+    outputs: [{ name: "", type: "uint32" }],
+  },
+  {
+    name: "balanceOf",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "_wearer", type: "address" },
+      { name: "_hatId", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
   },
 ] as const;
 

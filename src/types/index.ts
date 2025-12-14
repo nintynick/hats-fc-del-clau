@@ -33,9 +33,11 @@ export type ActionType =
   | "prepareReceive"
   | "cast"
   | "updateProfile"
-  | "changeUsername";
+  | "changeUsername"
+  | "mintCasterHat"
+  | "viewHatWearers";
 
-export type ActionGroup = "content" | "keys" | "ownership" | "account";
+export type ActionGroup = "content" | "keys" | "ownership" | "account" | "hats";
 
 export interface ActionConfig {
   type: ActionType;
@@ -48,6 +50,7 @@ export interface ActionConfig {
 export const ACTION_GROUPS: { id: ActionGroup; label: string }[] = [
   { id: "content", label: "Content" },
   { id: "keys", label: "Signer Keys" },
+  { id: "hats", label: "Hats Management" },
   { id: "ownership", label: "FID Ownership" },
   { id: "account", label: "Account Settings" },
 ];
@@ -82,6 +85,21 @@ export const ACTIONS: ActionConfig[] = [
     description: "Remove a signer key",
     requiredPermission: "owner",
     group: "keys",
+  },
+  // Hats group - managing hat wearers
+  {
+    type: "mintCasterHat",
+    label: "Mint Caster Hat",
+    description: "Grant caster permissions to an address",
+    requiredPermission: "owner",
+    group: "hats",
+  },
+  {
+    type: "viewHatWearers",
+    label: "View Hat Wearers",
+    description: "See who has owner and caster hats",
+    requiredPermission: "caster",
+    group: "hats",
   },
   // Ownership group - FID transfers
   {

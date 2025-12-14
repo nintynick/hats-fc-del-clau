@@ -17,6 +17,8 @@ import {
   Cast,
   UpdateProfile,
   ChangeUsername,
+  MintCasterHat,
+  ViewHatWearers,
 } from "./actions";
 import { useFarcasterContext, useDelegatorContract, useHatsCheck } from "@/hooks";
 import { truncateAddress } from "@/lib/utils";
@@ -363,6 +365,18 @@ export function DelegatorApp() {
                 <ChangeUsername
                   fid={userFid}
                   onSuccess={handleRefresh}
+                />
+              )}
+              {selectedAction === "mintCasterHat" && (
+                <MintCasterHat
+                  casterHat={delegatorInfo.casterHat}
+                  onSuccess={handleRefresh}
+                />
+              )}
+              {selectedAction === "viewHatWearers" && (
+                <ViewHatWearers
+                  ownerHat={delegatorInfo.ownerHat}
+                  casterHat={delegatorInfo.casterHat}
                 />
               )}
             </div>
