@@ -30,7 +30,7 @@ export async function GET() {
 
     return NextResponse.json({
       configured: true,
-      appFid: APP_FID,
+      appFid: APP_FID.trim(),
       signerAddress: account.address,
       note: "The signerAddress must be the custody address for appFid on Farcaster's IdRegistry"
     });
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
 
     // Deadline: 24 hours from now
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 86400);
-    const requestFid = BigInt(APP_FID);
+    const requestFid = BigInt(APP_FID.trim());
 
     // Sign the key request
     const signature = await client.signTypedData({
