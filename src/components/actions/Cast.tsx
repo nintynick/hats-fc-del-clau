@@ -223,7 +223,12 @@ export function Cast({ delegatorFid, onSuccess }: CastProps) {
           onClick={postCast}
           className="w-full"
           loading={status === "posting"}
-          disabled={!castText.trim() || (signers.length === 0 ? !manualSignerUuid.trim() : (!selectedSigner && !manualSignerUuid.trim()))}
+          disabled={
+            !castText.trim() ||
+            (signers.length === 0 || useManualSigner
+              ? !manualSignerUuid.trim()
+              : !selectedSigner)
+          }
         >
           {status === "posting" ? "Posting..." : "Post Cast"}
         </Button>

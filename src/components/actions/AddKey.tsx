@@ -140,50 +140,71 @@ export function AddKey({ delegatorAddress, delegatorFid, onSuccess }: AddKeyProp
     resetWrite();
   };
 
-  // Save signer to localStorage when successful
+  // Save signer to localStorage and track if we've already saved
+  const [signerSaved, setSignerSaved] = useState(false);
+
   useEffect(() => {
-    if (isSuccess && signer && delegatorFid) {
+    if (isSuccess && signer && delegatorFid && !signerSaved) {
       const storageKey = `signers_${delegatorFid.toString()}`;
       const existing = localStorage.getItem(storageKey);
-      let signers: Array<{ signer_uuid: string; public_key: string; created_at: string }> = [];
+      let storedSigners: Array<{ signer_uuid: string; public_key: string; created_at: string }> = [];
 
       if (existing) {
         try {
-          signers = JSON.parse(existing);
+          storedSigners = JSON.parse(existing);
         } catch {
           // Invalid JSON, start fresh
         }
       }
 
       // Add new signer if not already present
-      if (!signers.find(s => s.signer_uuid === signer.signer_uuid)) {
-        signers.push({
+      if (!storedSigners.find(s => s.signer_uuid === signer.signer_uuid)) {
+        storedSigners.push({
           signer_uuid: signer.signer_uuid,
           public_key: signer.public_key,
           created_at: new Date().toISOString(),
         });
-        localStorage.setItem(storageKey, JSON.stringify(signers));
+        localStorage.setItem(storageKey, JSON.stringify(storedSigners));
       }
+      setSignerSaved(true);
     }
-  }, [isSuccess, signer, delegatorFid]);
+  }, [isSuccess, signer, delegatorFid, signerSaved]);
 
   if (isSuccess) {
-    onSuccess?.();
     return (
-      <Alert variant="success">
-        <p>Key added successfully!</p>
-        <p className="text-xs mt-1">Transaction: {hash?.slice(0, 16)}...</p>
-        {signer && (
-          <>
-            <p className="text-xs mt-2 font-mono bg-zinc-100 dark:bg-zinc-800 p-2 rounded">
-              Signer UUID: {signer.signer_uuid}
-            </p>
-            <p className="text-xs mt-2">
-              This signer has been saved. You can now use it to cast from the shared account!
-            </p>
-          </>
-        )}
-      </Alert>
+      <Card variant="outline">
+        <CardContent className="py-6">
+          <Alert variant="success">
+            <p>Key added successfully!</p>
+            <p className="text-xs mt-1">Transaction: {hash?.slice(0, 16)}...</p>
+          </Alert>
+          {signer && (
+            <div className="mt-4 space-y-3">
+              <div className="bg-zinc-100 dark:bg-zinc-800 p-3 rounded-lg space-y-2">
+                <div>
+                  <p className="text-xs text-zinc-500">Signer UUID (saved)</p>
+                  <p className="text-xs font-mono break-all">{signer.signer_uuid}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-zinc-500">Public Key</p>
+                  <p className="text-xs font-mono break-all">{signer.public_key}</p>
+                </div>
+              </div>
+              <p className="text-xs text-zinc-500">
+                This signer has been saved. You can now use it to cast from the shared account!
+              </p>
+              <Button onClick={() => onSuccess?.()} className="w-full">
+                Done
+              </Button>
+            </div>
+          )}
+          {!signer && (
+            <Button onClick={() => onSuccess?.()} className="w-full mt-4">
+              Done
+            </Button>
+          )}
+        </CardContent>
+      </Card>
     );
   }
 
