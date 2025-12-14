@@ -247,6 +247,7 @@ export function DelegatorApp() {
               {selectedAction === "addKey" && (
                 <AddKey
                   delegatorAddress={contractAddress}
+                  delegatorFid={delegatorInfo.fid ?? undefined}
                   onSuccess={handleRefresh}
                 />
               )}
