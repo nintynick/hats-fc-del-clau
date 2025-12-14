@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount, useSignTypedData } from "wagmi";
+import { useAccount, useWalletClient } from "wagmi";
 import { Button, Input, Card, CardHeader, CardTitle, CardContent, Alert } from "@/components/ui";
 
 interface ChangeUsernameProps {
@@ -34,11 +34,16 @@ export function ChangeUsername({ fid, currentUsername, onSuccess }: ChangeUserna
   const [error, setError] = useState<string | null>(null);
 
   const { address } = useAccount();
-  const { signTypedDataAsync } = useSignTypedData();
+  const { data: walletClient } = useWalletClient();
 
   const changeUsername = async () => {
     if (!address) {
       setError("Please connect your wallet");
+      return;
+    }
+
+    if (!walletClient) {
+      setError("Wallet not connected");
       return;
     }
 
@@ -60,8 +65,8 @@ export function ChangeUsername({ fid, currentUsername, onSuccess }: ChangeUserna
     try {
       const timestamp = Math.floor(Date.now() / 1000);
 
-      // Sign the EIP-712 message
-      const signature = await signTypedDataAsync({
+      // Sign the EIP-712 message using walletClient directly
+      const signature = await walletClient.signTypedData({
         domain: FNAME_DOMAIN,
         types: FNAME_TYPES,
         primaryType: "UserNameProof",

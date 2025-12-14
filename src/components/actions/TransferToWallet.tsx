@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useSignTypedData, useReadContract } from "wagmi";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract, useWalletClient } from "wagmi";
 import { Button, Card, CardHeader, CardTitle, CardContent, Alert } from "@/components/ui";
-import { HATS_FARCASTER_DELEGATOR_ABI, ID_REGISTRY_ABI } from "@/lib/contracts";
+import { HATS_FARCASTER_DELEGATOR_ABI } from "@/lib/contracts";
 import { FARCASTER_CONTRACTS } from "@/lib/constants";
 
 interface TransferToWalletProps {
@@ -36,7 +36,7 @@ export function TransferToWallet({ delegatorAddress, fid, onSuccess }: TransferT
   const [deadline, setDeadline] = useState<bigint>(BigInt(0));
 
   const { address } = useAccount();
-  const { signTypedDataAsync } = useSignTypedData();
+  const { data: walletClient } = useWalletClient();
 
   // Get the nonce for the receiving address from IdRegistry
   const { data: nonce } = useReadContract({
@@ -88,6 +88,11 @@ export function TransferToWallet({ delegatorAddress, fid, onSuccess }: TransferT
       return;
     }
 
+    if (!walletClient) {
+      setError("Wallet not connected");
+      return;
+    }
+
     if (nonce === undefined) {
       setError("Could not fetch nonce from IdRegistry");
       return;
@@ -101,8 +106,8 @@ export function TransferToWallet({ delegatorAddress, fid, onSuccess }: TransferT
       const newDeadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
       setDeadline(newDeadline);
 
-      // Sign the Transfer message as the recipient
-      const sig = await signTypedDataAsync({
+      // Sign the Transfer message as the recipient using walletClient directly
+      const sig = await walletClient.signTypedData({
         domain: ID_REGISTRY_DOMAIN,
         types: TRANSFER_TYPES,
         primaryType: "Transfer",

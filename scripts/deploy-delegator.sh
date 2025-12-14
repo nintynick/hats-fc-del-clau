@@ -122,17 +122,18 @@ cast send $HATS "mintHat(uint256,address)" \
 echo ""
 echo "Step 5: Deploying HatsFarcasterDelegator via Factory..."
 
-# Encode immutable args: ownerHat (uint256) + idGateway + idRegistry + keyGateway + keyRegistry + signedKeyRequestValidator
-OTHER_ARGS=$(cast abi-encode "f(uint256,address,address,address,address,address)" \
-    $OWNER_HAT_ID \
-    $ID_GATEWAY \
-    $ID_REGISTRY \
-    $KEY_GATEWAY \
-    $KEY_REGISTRY \
-    $SIGNED_KEY_REQUEST_VALIDATOR)
+# Encode immutable args with encodePacked: ownerHat (uint256) + idGateway + idRegistry + keyGateway + keyRegistry + signedKeyRequestValidator
+# IMPORTANT: Must use encodePacked (not padded abi.encode) for HatsModuleFactory
+# uint256 = 32 bytes, address = 20 bytes (packed)
+OWNER_HAT_HEX=$(printf "%064x" $(echo $OWNER_HAT_ID | sed 's/0x//'))
+ID_GATEWAY_HEX=$(echo $ID_GATEWAY | sed 's/0x//' | tr '[:upper:]' '[:lower:]')
+ID_REGISTRY_HEX=$(echo $ID_REGISTRY | sed 's/0x//' | tr '[:upper:]' '[:lower:]')
+KEY_GATEWAY_HEX=$(echo $KEY_GATEWAY | sed 's/0x//' | tr '[:upper:]' '[:lower:]')
+KEY_REGISTRY_HEX=$(echo $KEY_REGISTRY | sed 's/0x//' | tr '[:upper:]' '[:lower:]')
+SIGNED_KEY_REQUEST_VALIDATOR_HEX=$(echo $SIGNED_KEY_REQUEST_VALIDATOR | sed 's/0x//' | tr '[:upper:]' '[:lower:]')
 
-# Remove 0x prefix for concatenation
-OTHER_ARGS=${OTHER_ARGS:2}
+OTHER_ARGS="${OWNER_HAT_HEX}${ID_GATEWAY_HEX}${ID_REGISTRY_HEX}${KEY_GATEWAY_HEX}${KEY_REGISTRY_HEX}${SIGNED_KEY_REQUEST_VALIDATOR_HEX}"
+echo "Other immutable args (packed): 0x${OTHER_ARGS}"
 
 # createHatsModule(address _implementation, uint256 _hatId, bytes _otherImmutableArgs, bytes _initData, uint256 _saltNonce)
 DELEGATOR_RESULT=$(cast send $HATS_MODULE_FACTORY "createHatsModule(address,uint256,bytes,bytes,uint256)" \
