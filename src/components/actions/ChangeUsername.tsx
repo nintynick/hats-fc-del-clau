@@ -162,6 +162,45 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
   const resetState = () => {
     setStatus("idle");
     setError(null);
+    setBroadcastSkipped(false);
+  };
+
+  const [manualSignerUuid, setManualSignerUuid] = useState("");
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+
+  const broadcastToHubs = async () => {
+    const signerUuid = signers.length > 0 ? signers[0].signer_uuid : manualSignerUuid;
+
+    if (!signerUuid.trim()) {
+      setError("Please enter a signer UUID");
+      return;
+    }
+
+    setIsBroadcasting(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          signer_uuid: signerUuid,
+          username: newUsername,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to broadcast");
+      }
+
+      setBroadcastSkipped(false);
+    } catch (err) {
+      console.error("Error broadcasting:", err);
+      setError(err instanceof Error ? err.message : "Failed to broadcast");
+    } finally {
+      setIsBroadcasting(false);
+    }
   };
 
   // Success state
@@ -173,8 +212,8 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
             <p>Username changed to @{newUsername}!</p>
             {broadcastSkipped ? (
               <p className="text-xs mt-1">
-                Fname registered but broadcast to hubs was skipped (no signer available).
-                The username may take longer to appear in clients.
+                Fname registered but broadcast to hubs was skipped.
+                Use the button below to broadcast manually.
               </p>
             ) : (
               <p className="text-xs mt-1">
@@ -182,6 +221,44 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
               </p>
             )}
           </Alert>
+
+          {/* Manual broadcast section */}
+          {broadcastSkipped && (
+            <div className="mt-4 space-y-3">
+              <div className="border-t border-zinc-200 dark:border-zinc-700 pt-4">
+                <p className="text-sm font-medium mb-2">Broadcast to Hubs</p>
+                {signers.length > 0 ? (
+                  <p className="text-xs text-zinc-500 mb-2">
+                    Using signer: {signers[0].signer_uuid.slice(0, 12)}...
+                  </p>
+                ) : (
+                  <Input
+                    label="Signer UUID"
+                    placeholder="Enter your signer UUID"
+                    value={manualSignerUuid}
+                    onChange={(e) => setManualSignerUuid(e.target.value)}
+                    hint="From Neynar or stored signer"
+                  />
+                )}
+
+                {error && (
+                  <Alert variant="error" className="mt-2">
+                    {error}
+                  </Alert>
+                )}
+
+                <Button
+                  onClick={broadcastToHubs}
+                  className="w-full mt-2"
+                  loading={isBroadcasting}
+                  disabled={signers.length === 0 && !manualSignerUuid.trim()}
+                >
+                  {isBroadcasting ? "Broadcasting..." : "Broadcast to Hubs"}
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="mt-4">
             <Button onClick={resetState} variant="ghost" className="w-full">
               Change Again
