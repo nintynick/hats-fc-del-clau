@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { useAccount, useConnect } from "wagmi";
+import { useAccount, useConnect, useReadContract } from "wagmi";
 import { ContractInput } from "./ContractInput";
 import { ContractStatus } from "./ContractStatus";
 import { Button, Card, CardContent, Alert } from "@/components/ui";
@@ -19,6 +19,8 @@ import {
 } from "./actions";
 import { useFarcasterContext, useDelegatorContract, useHatsCheck } from "@/hooks";
 import { truncateAddress } from "@/lib/utils";
+import { ID_REGISTRY_ABI } from "@/lib/contracts";
+import { FARCASTER_CONTRACTS } from "@/lib/constants";
 import { ACTIONS, type ActionType } from "@/types";
 
 export function DelegatorApp() {
@@ -41,6 +43,17 @@ export function DelegatorApp() {
       casterHat: delegatorInfo?.casterHat,
       enabled: !!delegatorInfo && !!userAddress,
     });
+
+  // Fetch FID for connected wallet (for Change Username action)
+  const { data: userFid } = useReadContract({
+    address: FARCASTER_CONTRACTS.ID_REGISTRY,
+    abi: ID_REGISTRY_ABI,
+    functionName: "idOf",
+    args: userAddress ? [userAddress] : undefined,
+    query: {
+      enabled: !!userAddress,
+    },
+  });
 
   // Auto-connect wallet when contract is selected
   useEffect(() => {
@@ -186,17 +199,21 @@ export function DelegatorApp() {
                 <div className="space-y-2">
                   {ACTIONS.map((action) => {
                     const canDo = canPerformAction(action.requiredPermission);
-                    const needsFid =
-                      ["removeKey", "transferFid", "transferToWallet", "changeRecovery", "addKey", "cast", "updateProfile", "changeUsername"].includes(
+                    // Actions that need the CONTRACT to have an FID
+                    const needsContractFid =
+                      ["removeKey", "transferFid", "transferToWallet", "changeRecovery", "addKey", "cast", "updateProfile"].includes(
                         action.type
                       ) && !delegatorInfo.fid;
+                    // Change Username needs the USER'S WALLET to have an FID
+                    const needsUserFid =
+                      action.type === "changeUsername" && (!userFid || userFid === 0n);
                     const hasFid =
                       action.type === "register" && delegatorInfo.fid;
                     // prepareReceive only works when contract has NO FID
                     const cantPrepare =
                       action.type === "prepareReceive" && delegatorInfo.fid;
 
-                    const disabled = !canDo || needsFid || !!hasFid || !!cantPrepare;
+                    const disabled = !canDo || needsContractFid || needsUserFid || !!hasFid || !!cantPrepare;
 
                     return (
                       <button
@@ -216,9 +233,14 @@ export function DelegatorApp() {
                               {action.requiredPermission} only
                             </span>
                           )}
-                          {needsFid && (
+                          {needsContractFid && (
                             <span className="text-xs text-zinc-400">
                               needs FID
+                            </span>
+                          )}
+                          {needsUserFid && (
+                            <span className="text-xs text-zinc-400">
+                              needs FID in wallet
                             </span>
                           )}
                           {hasFid && (
@@ -310,9 +332,9 @@ export function DelegatorApp() {
                   delegatorFid={delegatorInfo.fid}
                 />
               )}
-              {selectedAction === "changeUsername" && delegatorInfo.fid && (
+              {selectedAction === "changeUsername" && userFid && userFid > 0n && (
                 <ChangeUsername
-                  fid={delegatorInfo.fid}
+                  fid={userFid}
                   onSuccess={handleRefresh}
                 />
               )}

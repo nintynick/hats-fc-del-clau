@@ -1,7 +1,10 @@
 "use client";
 
+import { useReadContract } from "wagmi";
 import { Card, CardHeader, CardTitle, CardContent, Alert } from "@/components/ui";
 import { truncateAddress, formatHatId } from "@/lib/utils";
+import { ID_REGISTRY_ABI } from "@/lib/contracts";
+import { FARCASTER_CONTRACTS } from "@/lib/constants";
 import type { DelegatorInfo, UserPermissions } from "@/types";
 
 interface ContractStatusProps {
@@ -17,6 +20,17 @@ export function ContractStatus({
 }: ContractStatusProps) {
   const { address, ownerHat, casterHat, fid, recoveryAddress } = delegatorInfo;
   const { isOwner, isCaster, permission } = permissions;
+
+  // Fetch FID for connected wallet
+  const { data: userFid } = useReadContract({
+    address: FARCASTER_CONTRACTS.ID_REGISTRY,
+    abi: ID_REGISTRY_ABI,
+    functionName: "idOf",
+    args: userAddress ? [userAddress] : undefined,
+    query: {
+      enabled: !!userAddress,
+    },
+  });
 
   return (
     <div className="space-y-4">
@@ -76,9 +90,17 @@ export function ContractStatus({
         </CardHeader>
         <CardContent>
           {userAddress && (
-            <div className="mb-3 flex justify-between text-sm">
-              <span className="text-zinc-500 dark:text-zinc-400">Connected</span>
-              <span className="font-mono text-xs">{truncateAddress(userAddress)}</span>
+            <div className="mb-3 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500 dark:text-zinc-400">Connected</span>
+                <span className="font-mono text-xs">{truncateAddress(userAddress)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500 dark:text-zinc-400">Your FID</span>
+                <span className="font-mono text-xs">
+                  {userFid && userFid > 0n ? userFid.toString() : "None"}
+                </span>
+              </div>
             </div>
           )}
           {!userAddress ? (
