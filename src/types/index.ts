@@ -30,7 +30,8 @@ export type ActionType =
   | "changeRecovery"
   | "prepareReceive"
   | "cast"
-  | "updateProfile";
+  | "updateProfile"
+  | "changeUsername";
 
 export interface ActionConfig {
   type: ActionType;
@@ -85,8 +86,14 @@ export const ACTIONS: ActionConfig[] = [
   {
     type: "updateProfile",
     label: "Update Profile",
-    description: "Change username, bio, or profile picture",
+    description: "Change display name, bio, or profile picture",
     requiredPermission: "caster",
+  },
+  {
+    type: "changeUsername",
+    label: "Change Username",
+    description: "Change the @username (requires wallet signature)",
+    requiredPermission: "owner",
   },
 ];
 // trigger 1765686252

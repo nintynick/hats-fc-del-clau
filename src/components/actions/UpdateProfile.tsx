@@ -24,7 +24,6 @@ export function UpdateProfile({ delegatorFid, onSuccess }: UpdateProfileProps) {
   const [useManualSigner, setUseManualSigner] = useState(false);
 
   const [displayName, setDisplayName] = useState("");
-  const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [pfpUrl, setPfpUrl] = useState("");
   const [profileUrl, setProfileUrl] = useState("");
@@ -56,7 +55,7 @@ export function UpdateProfile({ delegatorFid, onSuccess }: UpdateProfileProps) {
     }
 
     // Check if at least one field is filled
-    if (!displayName && !username && !bio && !pfpUrl && !profileUrl) {
+    if (!displayName && !bio && !pfpUrl && !profileUrl) {
       setError("Please fill in at least one field to update");
       return;
     }
@@ -70,7 +69,6 @@ export function UpdateProfile({ delegatorFid, onSuccess }: UpdateProfileProps) {
       };
 
       if (displayName.trim()) updatePayload.display_name = displayName.trim();
-      if (username.trim()) updatePayload.username = username.trim().toLowerCase();
       if (bio.trim()) updatePayload.bio = bio.trim();
       if (pfpUrl.trim()) updatePayload.pfp_url = pfpUrl.trim();
       if (profileUrl.trim()) updatePayload.url = profileUrl.trim();
@@ -195,14 +193,6 @@ export function UpdateProfile({ delegatorFid, onSuccess }: UpdateProfileProps) {
             hint="The name shown on the profile"
           />
 
-          <Input
-            label="Username"
-            placeholder="e.g. sharedaccount"
-            value={username}
-            onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-            hint="Unique @username (lowercase, letters, numbers, hyphens only)"
-          />
-
           <div className="space-y-2">
             <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
               Bio
@@ -253,7 +243,7 @@ export function UpdateProfile({ delegatorFid, onSuccess }: UpdateProfileProps) {
             (signers.length === 0 || useManualSigner
               ? !manualSignerUuid.trim()
               : !selectedSigner) ||
-            (!displayName && !username && !bio && !pfpUrl && !profileUrl)
+            (!displayName && !bio && !pfpUrl && !profileUrl)
           }
         >
           {status === "updating" ? "Updating..." : "Update Profile"}
