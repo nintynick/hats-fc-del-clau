@@ -1,10 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createWalletClient, http, encodeAbiParameters, hexToBytes } from "viem";
+import { createWalletClient, http, encodeAbiParameters } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { optimism } from "viem/chains";
 
 const APP_PRIVATE_KEY = process.env.APP_PRIVATE_KEY;
 const APP_FID = process.env.APP_FID;
+
+// GET endpoint to check configuration
+export async function GET() {
+  if (!APP_PRIVATE_KEY || !APP_FID) {
+    return NextResponse.json({
+      configured: false,
+      appFid: APP_FID ? 'set' : 'missing',
+      appPrivateKey: APP_PRIVATE_KEY ? 'set' : 'missing',
+    });
+  }
+
+  try {
+    // Clean key same as in POST
+    let cleanKey = APP_PRIVATE_KEY.trim()
+      .replace(/^["']|["']$/g, '')
+      .replace(/\s/g, '');
+
+    if (!cleanKey.startsWith('0x')) {
+      cleanKey = `0x${cleanKey}`;
+    }
+
+    const account = privateKeyToAccount(cleanKey as `0x${string}`);
+
+    return NextResponse.json({
+      configured: true,
+      appFid: APP_FID,
+      signerAddress: account.address,
+      note: "The signerAddress must be the custody address for appFid on Farcaster's IdRegistry"
+    });
+  } catch (error) {
+    return NextResponse.json({
+      configured: false,
+      error: error instanceof Error ? error.message : "Failed to derive account",
+    });
+  }
+}
 
 // EIP-712 types for SignedKeyRequest
 const SIGNED_KEY_REQUEST_TYPE = {
@@ -106,6 +142,12 @@ export async function POST(request: NextRequest) {
       deadline: deadline.toString(),
       requestFid: requestFid.toString(),
       requestSigner: account.address,
+      // Debug info
+      debug: {
+        signerAddress: account.address,
+        publicKeyUsed: publicKey,
+        keyLength: (publicKey as string).length,
+      }
     });
   } catch (error) {
     console.error("Error generating metadata:", error);
