@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --primary: #8b5cf6;
+  --primary-dark: #7c3aed;
+  --success: #10b981;
+  --error: #ef4444;
+  --warning: #f59e0b;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --border: #374151;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Miniapp viewport optimization */
+.miniapp-container {
+  max-width: 100%;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+/* Safe area insets for mobile */
+@supports (padding: env(safe-area-inset-top)) {
+  .miniapp-container {
+    padding-top: calc(1rem + env(safe-area-inset-top));
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    padding-left: calc(1rem + env(safe-area-inset-left));
+    padding-right: calc(1rem + env(safe-area-inset-right));
+  }
+}
