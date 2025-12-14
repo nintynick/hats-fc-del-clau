@@ -167,17 +167,25 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
 
   const [manualSignerUuid, setManualSignerUuid] = useState("");
   const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [broadcastSuccess, setBroadcastSuccess] = useState(false);
+  const [broadcastError, setBroadcastError] = useState<string | null>(null);
 
-  const broadcastToHubs = async () => {
+  const broadcastToHubs = async (usernameTobroadcast: string) => {
     const signerUuid = signers.length > 0 ? signers[0].signer_uuid : manualSignerUuid;
 
     if (!signerUuid.trim()) {
-      setError("Please enter a signer UUID");
+      setBroadcastError("Please enter a signer UUID");
+      return;
+    }
+
+    if (!usernameTobroadcast.trim()) {
+      setBroadcastError("No username to broadcast");
       return;
     }
 
     setIsBroadcasting(true);
-    setError(null);
+    setBroadcastError(null);
+    setBroadcastSuccess(false);
 
     try {
       const response = await fetch("/api/profile", {
@@ -185,7 +193,7 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           signer_uuid: signerUuid,
-          username: newUsername,
+          username: usernameTobroadcast,
         }),
       });
 
@@ -195,9 +203,10 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
       }
 
       setBroadcastSkipped(false);
+      setBroadcastSuccess(true);
     } catch (err) {
       console.error("Error broadcasting:", err);
-      setError(err instanceof Error ? err.message : "Failed to broadcast");
+      setBroadcastError(err instanceof Error ? err.message : "Failed to broadcast");
     } finally {
       setIsBroadcasting(false);
     }
@@ -241,14 +250,14 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
                   />
                 )}
 
-                {error && (
+                {broadcastError && (
                   <Alert variant="error" className="mt-2">
-                    {error}
+                    {broadcastError}
                   </Alert>
                 )}
 
                 <Button
-                  onClick={broadcastToHubs}
+                  onClick={() => broadcastToHubs(newUsername)}
                   className="w-full mt-2"
                   loading={isBroadcasting}
                   disabled={signers.length === 0 && !manualSignerUuid.trim()}
@@ -326,6 +335,53 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
         <p className="text-xs text-zinc-500 text-center">
           Connected: {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Not connected"}
         </p>
+
+        {/* Broadcast existing username to hubs */}
+        {currentUsername && (
+          <div className="border-t border-zinc-200 dark:border-zinc-700 pt-4 mt-4">
+            <p className="text-sm font-medium mb-2">Broadcast Current Username to Hubs</p>
+            <p className="text-xs text-zinc-500 mb-3">
+              If your username (@{currentUsername}) isn&apos;t showing in Farcaster clients,
+              broadcast it to the hubs.
+            </p>
+
+            {signers.length > 0 ? (
+              <p className="text-xs text-zinc-500 mb-2">
+                Using signer: {signers[0].signer_uuid.slice(0, 12)}...
+              </p>
+            ) : (
+              <Input
+                label="Signer UUID"
+                placeholder="Enter your signer UUID"
+                value={manualSignerUuid}
+                onChange={(e) => setManualSignerUuid(e.target.value)}
+                hint="From Neynar or stored signer"
+              />
+            )}
+
+            {broadcastError && (
+              <Alert variant="error" className="mt-2">
+                {broadcastError}
+              </Alert>
+            )}
+
+            {broadcastSuccess && (
+              <Alert variant="success" className="mt-2">
+                Username broadcast successfully!
+              </Alert>
+            )}
+
+            <Button
+              onClick={() => broadcastToHubs(currentUsername)}
+              className="w-full mt-2"
+              variant="secondary"
+              loading={isBroadcasting}
+              disabled={signers.length === 0 && !manualSignerUuid.trim()}
+            >
+              {isBroadcasting ? "Broadcasting..." : "Broadcast to Hubs"}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
