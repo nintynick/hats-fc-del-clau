@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createWalletClient, http, encodeAbiParameters } from "viem";
+import { encodeAbiParameters, hexToBytes, bytesToHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { optimism } from "viem/chains";
+import { ViemLocalEip712Signer } from "@farcaster/hub-nodejs";
 
 const APP_PRIVATE_KEY = process.env.APP_PRIVATE_KEY;
 const APP_FID = process.env.APP_FID;
@@ -42,22 +42,6 @@ export async function GET() {
   }
 }
 
-// EIP-712 types for SignedKeyRequest
-const SIGNED_KEY_REQUEST_TYPE = {
-  SignedKeyRequest: [
-    { name: "requestFid", type: "uint256" },
-    { name: "key", type: "bytes" },
-    { name: "deadline", type: "uint256" },
-  ],
-};
-
-// SignedKeyRequestValidator domain
-const DOMAIN = {
-  name: "Farcaster SignedKeyRequestValidator",
-  version: "1",
-  chainId: 10,
-  verifyingContract: "0x00000000FC700472606ED4fA22623Acf62c60553" as `0x${string}`,
-};
 
 export async function POST(request: NextRequest) {
   if (!APP_PRIVATE_KEY || !APP_FID) {
@@ -102,39 +86,51 @@ export async function POST(request: NextRequest) {
     // Create account from private key
     const account = privateKeyToAccount(privateKey);
 
-    // Create wallet client for signing
-    const client = createWalletClient({
-      account,
-      chain: optimism,
-      transport: http(),
-    });
+    // Create Farcaster EIP-712 signer
+    const eip712Signer = new ViemLocalEip712Signer(account);
 
     // Deadline: 24 hours from now
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 86400);
     const requestFid = BigInt(APP_FID.trim());
 
-    // Sign the key request
-    const signature = await client.signTypedData({
-      domain: DOMAIN,
-      types: SIGNED_KEY_REQUEST_TYPE,
-      primaryType: "SignedKeyRequest",
-      message: {
-        requestFid,
-        key: publicKey as `0x${string}`,
-        deadline,
-      },
+    // Sign the key request using Farcaster's signer
+    const signatureResult = await eip712Signer.signKeyRequest({
+      requestFid,
+      key: hexToBytes(publicKey as `0x${string}`),
+      deadline,
     });
 
-    // Encode the metadata struct for the contract
+    if (signatureResult.isErr()) {
+      return NextResponse.json(
+        { error: `Failed to sign: ${signatureResult.error}` },
+        { status: 500 }
+      );
+    }
+
+    const signature = bytesToHex(signatureResult.value);
+
+    // Encode the metadata struct for the contract as a tuple
     // SignedKeyRequestMetadata(uint256 requestFid, address requestSigner, bytes signature, uint256 deadline)
     const metadata = encodeAbiParameters(
       [
-        { name: "requestFid", type: "uint256" },
-        { name: "requestSigner", type: "address" },
-        { name: "signature", type: "bytes" },
-        { name: "deadline", type: "uint256" },
+        {
+          components: [
+            { name: "requestFid", type: "uint256" },
+            { name: "requestSigner", type: "address" },
+            { name: "signature", type: "bytes" },
+            { name: "deadline", type: "uint256" },
+          ],
+          type: "tuple",
+        },
       ],
-      [requestFid, account.address, signature, deadline]
+      [
+        {
+          requestFid,
+          requestSigner: account.address,
+          signature,
+          deadline,
+        },
+      ]
     );
 
     return NextResponse.json({
