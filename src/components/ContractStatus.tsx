@@ -96,7 +96,7 @@ export function ContractStatus({
                 <span className="font-mono text-xs">{truncateAddress(userAddress)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-zinc-500 dark:text-zinc-400">Your FID</span>
+                <span className="text-zinc-500 dark:text-zinc-400">Wallet FID</span>
                 <span className="font-mono text-xs">
                   {userFid && userFid > 0n ? userFid.toString() : "None"}
                 </span>
