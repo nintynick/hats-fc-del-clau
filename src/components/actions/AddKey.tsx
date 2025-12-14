@@ -114,10 +114,6 @@ export function AddKey({ delegatorAddress, onSuccess }: AddKeyProps) {
     }
   }, [writeError]);
 
-  // Debug: log state changes
-  useEffect(() => {
-    console.log("[AddKey] State:", { status, isPending, isConfirming, isSuccess, hash, writeError: writeError?.message });
-  }, [status, isPending, isConfirming, isSuccess, hash, writeError]);
 
   // Handle manual mode submission
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -300,13 +296,6 @@ export function AddKey({ delegatorAddress, onSuccess }: AddKeyProps) {
                 Tx: {hash.slice(0, 10)}...{hash.slice(-8)}
               </p>
             )}
-            {/* Debug info */}
-            <div className="text-xs text-zinc-400 mt-2 p-2 bg-zinc-100 dark:bg-zinc-800 rounded">
-              <p>isPending: {String(isPending)}</p>
-              <p>isConfirming: {String(isConfirming)}</p>
-              <p>isSuccess: {String(isSuccess)}</p>
-              <p>hash: {hash ? hash.slice(0, 16) : 'null'}</p>
-            </div>
           </div>
         )}
 
