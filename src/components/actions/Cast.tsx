@@ -44,9 +44,10 @@ export function Cast({ delegatorFid, onSuccess }: CastProps) {
   }, [delegatorFid]);
 
   const postCast = async () => {
-    const signerUuid = useManualSigner ? manualSignerUuid : selectedSigner;
+    // Use manual input if no saved signers OR if user switched to manual mode
+    const signerUuid = (signers.length === 0 || useManualSigner) ? manualSignerUuid : selectedSigner;
 
-    if (!signerUuid) {
+    if (!signerUuid || !signerUuid.trim()) {
       setError("Please enter or select a signer UUID");
       return;
     }
@@ -222,7 +223,7 @@ export function Cast({ delegatorFid, onSuccess }: CastProps) {
           onClick={postCast}
           className="w-full"
           loading={status === "posting"}
-          disabled={!castText.trim() || (!selectedSigner && !manualSignerUuid)}
+          disabled={!castText.trim() || (signers.length === 0 ? !manualSignerUuid.trim() : (!selectedSigner && !manualSignerUuid.trim()))}
         >
           {status === "posting" ? "Posting..." : "Post Cast"}
         </Button>
