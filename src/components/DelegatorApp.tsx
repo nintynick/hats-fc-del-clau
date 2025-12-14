@@ -171,13 +171,16 @@ export function DelegatorApp() {
                   {ACTIONS.map((action) => {
                     const canDo = canPerformAction(action.requiredPermission);
                     const needsFid =
-                      ["removeKey", "transferFid", "changeRecovery"].includes(
+                      ["removeKey", "transferFid", "changeRecovery", "addKey"].includes(
                         action.type
                       ) && !delegatorInfo.fid;
                     const hasFid =
                       action.type === "register" && delegatorInfo.fid;
+                    // prepareReceive only works when contract has NO FID
+                    const cantPrepare =
+                      action.type === "prepareReceive" && delegatorInfo.fid;
 
-                    const disabled = !canDo || needsFid || !!hasFid;
+                    const disabled = !canDo || needsFid || !!hasFid || !!cantPrepare;
 
                     return (
                       <button
@@ -205,6 +208,11 @@ export function DelegatorApp() {
                           {hasFid && (
                             <span className="text-xs text-zinc-400">
                               already registered
+                            </span>
+                          )}
+                          {cantPrepare && (
+                            <span className="text-xs text-zinc-400">
+                              already has FID
                             </span>
                           )}
                         </div>

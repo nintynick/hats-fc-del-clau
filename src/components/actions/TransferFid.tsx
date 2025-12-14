@@ -97,12 +97,21 @@ export function TransferFid({ delegatorAddress, fid, onSuccess }: TransferFidPro
           />
 
           <Input
-            label="Signature (Optional)"
+            label="Recipient Signature"
             placeholder="0x..."
             value={signature}
             onChange={(e) => setSignature(e.target.value)}
-            hint="EIP-712 signature for the transfer (if required)"
+            hint="EIP-712 Transfer signature from the recipient address"
+            error={!signature ? "Signature is required" : undefined}
           />
+
+          <Alert variant="warning">
+            <p className="text-xs">
+              <strong>Important:</strong> The recipient must sign an EIP-712 Transfer message
+              agreeing to receive the FID. The signature format is:
+              Transfer(uint256 fid, address to, uint256 nonce, uint256 deadline)
+            </p>
+          </Alert>
 
           <Alert variant="warning">
             <p className="text-xs">
@@ -122,7 +131,7 @@ export function TransferFid({ delegatorAddress, fid, onSuccess }: TransferFidPro
             variant="danger"
             className="w-full"
             loading={isPending || isConfirming}
-            disabled={!toAddress || !isValidAddress(toAddress)}
+            disabled={!toAddress || !isValidAddress(toAddress) || !signature}
           >
             {isConfirming ? "Confirming..." : "Transfer FID"}
           </Button>

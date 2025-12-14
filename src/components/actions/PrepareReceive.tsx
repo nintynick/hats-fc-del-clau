@@ -73,9 +73,9 @@ export function PrepareReceive({ delegatorAddress, onSuccess }: PrepareReceivePr
 
           <Alert variant="info">
             <p className="text-xs">
-              This prepares the contract to receive an existing FID. After
-              calling this, the FID owner can transfer it to this contract
-              without needing a signature from the contract.
+              <strong>Note:</strong> This prepares the contract to receive an existing FID
+              from another address. This only works if the contract does NOT already have an FID.
+              After calling this, the FID owner can transfer it to this contract.
             </p>
           </Alert>
 
