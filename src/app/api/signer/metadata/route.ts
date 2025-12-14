@@ -26,7 +26,7 @@ const DOMAIN = {
 export async function POST(request: NextRequest) {
   if (!APP_PRIVATE_KEY || !APP_FID) {
     return NextResponse.json(
-      { error: "APP_PRIVATE_KEY and APP_FID must be configured" },
+      { error: `APP_PRIVATE_KEY and APP_FID must be configured. Got: FID=${APP_FID ? 'set' : 'missing'}, KEY=${APP_PRIVATE_KEY ? 'set' : 'missing'}` },
       { status: 500 }
     );
   }
@@ -42,8 +42,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Ensure private key has 0x prefix
+    const privateKey = APP_PRIVATE_KEY.startsWith('0x')
+      ? APP_PRIVATE_KEY as `0x${string}`
+      : `0x${APP_PRIVATE_KEY}` as `0x${string}`;
+
     // Create account from private key
-    const account = privateKeyToAccount(APP_PRIVATE_KEY as `0x${string}`);
+    const account = privateKeyToAccount(privateKey);
 
     // Create wallet client for signing
     const client = createWalletClient({
