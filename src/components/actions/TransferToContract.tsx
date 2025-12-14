@@ -26,27 +26,16 @@ const ID_REGISTRY_TRANSFER_ABI = [
     ],
     outputs: [],
   },
-  {
-    name: "pendingRecoveryOf",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "fid", type: "uint256" }],
-    outputs: [{ name: "recovery", type: "address" }],
-  },
 ] as const;
 
-// HatsFarcasterDelegator ABI for getting the prepared signature
-const DELEGATOR_RECEIVE_ABI = [
+// HatsFarcasterDelegator ABI - receivable is a mapping(uint256 fid => bool)
+const DELEGATOR_RECEIVABLE_ABI = [
   {
     name: "receivable",
     type: "function",
     stateMutability: "view",
-    inputs: [],
-    outputs: [
-      { name: "fid", type: "uint256" },
-      { name: "deadline", type: "uint256" },
-      { name: "sig", type: "bytes" },
-    ],
+    inputs: [{ name: "fid", type: "uint256" }],
+    outputs: [{ name: "", type: "bool" }],
   },
 ] as const;
 
@@ -54,11 +43,12 @@ export function TransferToContract({ delegatorAddress, userFid, onSuccess }: Tra
   const { address } = useAccount();
   const [error, setError] = useState<string | null>(null);
 
-  // Check if contract is prepared to receive this FID
-  const { data: receivableData, isLoading: isLoadingReceivable } = useReadContract({
+  // Check if contract is prepared to receive this specific FID
+  const { data: isReceivable, isLoading: isLoadingReceivable } = useReadContract({
     address: delegatorAddress,
-    abi: DELEGATOR_RECEIVE_ABI,
+    abi: DELEGATOR_RECEIVABLE_ABI,
     functionName: "receivable",
+    args: [userFid],
   });
 
   const {
@@ -73,31 +63,25 @@ export function TransferToContract({ delegatorAddress, userFid, onSuccess }: Tra
   });
 
   const handleTransfer = () => {
-    if (!receivableData) {
-      setError("Contract is not prepared to receive any FID");
-      return;
-    }
-
-    const [preparedFid, deadline, sig] = receivableData;
-
-    if (preparedFid !== userFid) {
-      setError(`Contract is prepared to receive FID ${preparedFid.toString()}, not your FID ${userFid.toString()}`);
-      return;
-    }
-
-    if (deadline < BigInt(Math.floor(Date.now() / 1000))) {
-      setError("The prepared signature has expired. Please run Prepare to Receive again.");
+    if (!isReceivable) {
+      setError("Contract is not prepared to receive this FID");
       return;
     }
 
     setError(null);
+
+    // For HatsFarcasterDelegator, when receivable[fid] = true, the contract
+    // validates transfers via EIP-1271 isValidSignature without needing a
+    // cryptographic signature. We pass an empty signature and a far-future deadline.
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600); // 1 hour from now
+    const emptySig = "0x" as `0x${string}`;
 
     // Call IdRegistry.transfer from user's wallet
     writeContract({
       address: FARCASTER_CONTRACTS.ID_REGISTRY,
       abi: ID_REGISTRY_TRANSFER_ABI,
       functionName: "transfer",
-      args: [delegatorAddress, deadline, sig],
+      args: [delegatorAddress, deadline, emptySig],
     });
   };
 
@@ -116,10 +100,6 @@ export function TransferToContract({ delegatorAddress, userFid, onSuccess }: Tra
       </Card>
     );
   }
-
-  const isPrepared = receivableData && receivableData[0] === userFid;
-  const isExpired = receivableData && receivableData[1] < BigInt(Math.floor(Date.now() / 1000));
-  const preparedForDifferentFid = receivableData && receivableData[0] !== userFid && receivableData[0] > 0n;
 
   return (
     <Card variant="outline">
@@ -142,25 +122,11 @@ export function TransferToContract({ delegatorAddress, userFid, onSuccess }: Tra
           <div className="flex items-center justify-center py-4">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-violet-600 border-t-transparent" />
           </div>
-        ) : !receivableData || receivableData[0] === 0n ? (
+        ) : !isReceivable ? (
           <Alert variant="warning">
-            <p>Contract is not prepared to receive any FID.</p>
+            <p>Contract is not prepared to receive FID {userFid.toString()}.</p>
             <p className="text-xs mt-1">
               First use "Prepare to Receive" with FID {userFid.toString()}, then come back here.
-            </p>
-          </Alert>
-        ) : preparedForDifferentFid ? (
-          <Alert variant="warning">
-            <p>Contract is prepared to receive FID {receivableData[0].toString()}, not your FID ({userFid.toString()}).</p>
-            <p className="text-xs mt-1">
-              Use "Prepare to Receive" with FID {userFid.toString()} first.
-            </p>
-          </Alert>
-        ) : isExpired ? (
-          <Alert variant="warning">
-            <p>The prepared signature has expired.</p>
-            <p className="text-xs mt-1">
-              Run "Prepare to Receive" again to get a fresh signature.
             </p>
           </Alert>
         ) : (
@@ -182,7 +148,7 @@ export function TransferToContract({ delegatorAddress, userFid, onSuccess }: Tra
           onClick={handleTransfer}
           className="w-full"
           loading={isPending || isConfirming}
-          disabled={!isPrepared || isExpired || !address}
+          disabled={!isReceivable || !address}
         >
           {isConfirming ? "Confirming..." : "Transfer FID to Contract"}
         </Button>
