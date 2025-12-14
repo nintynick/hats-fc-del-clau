@@ -5,3 +5,4 @@ export { ChangeRecovery } from "./ChangeRecovery";
 export { TransferFid } from "./TransferFid";
 export { PrepareReceive } from "./PrepareReceive";
 export { Cast } from "./Cast";
+export { UpdateProfile } from "./UpdateProfile";

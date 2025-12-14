@@ -28,7 +28,8 @@ export type ActionType =
   | "transferFid"
   | "changeRecovery"
   | "prepareReceive"
-  | "cast";
+  | "cast"
+  | "updateProfile";
 
 export interface ActionConfig {
   type: ActionType;
@@ -78,6 +79,12 @@ export const ACTIONS: ActionConfig[] = [
     type: "cast",
     label: "Cast",
     description: "Post a cast from the shared account",
+    requiredPermission: "caster",
+  },
+  {
+    type: "updateProfile",
+    label: "Update Profile",
+    description: "Change username, bio, or profile picture",
     requiredPermission: "caster",
   },
 ];
