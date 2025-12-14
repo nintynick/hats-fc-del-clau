@@ -88,6 +88,12 @@ export function AddKey({ delegatorAddress, delegatorFid, onSuccess }: AddKeyProp
 
     setStatus("adding_key");
 
+    console.log("AddKey: Calling writeContract with:", {
+      address: delegatorAddress,
+      functionName: "addKey",
+      args: [1, signer.public_key, 1, metadata?.slice(0, 50) + "..."],
+    });
+
     try {
       writeContract({
         address: delegatorAddress,
@@ -99,20 +105,40 @@ export function AddKey({ delegatorAddress, delegatorFid, onSuccess }: AddKeyProp
           1, // metadataType: 1 = SignedKeyRequest
           metadata as `0x${string}`,
         ],
+      }, {
+        onSuccess: (data) => {
+          console.log("AddKey: writeContract success, hash:", data);
+        },
+        onError: (error) => {
+          console.error("AddKey: writeContract error:", error);
+        },
       });
     } catch (err) {
-      console.error("Error adding key:", err);
+      console.error("AddKey: Error in writeContract:", err);
       setError(err instanceof Error ? err.message : "Failed to add key");
       setStatus("error");
     }
   };
 
-  // Watch for transaction errors
+  // Watch for transaction errors and hash
   useEffect(() => {
     if (writeError) {
+      console.error("AddKey: writeError:", writeError);
       setStatus("error");
     }
   }, [writeError]);
+
+  // Log hash changes
+  useEffect(() => {
+    if (hash) {
+      console.log("AddKey: Transaction hash received:", hash);
+    }
+  }, [hash]);
+
+  // Log confirmation status
+  useEffect(() => {
+    console.log("AddKey: isConfirming:", isConfirming, "isSuccess:", isSuccess);
+  }, [isConfirming, isSuccess]);
 
 
   // Handle manual mode submission
