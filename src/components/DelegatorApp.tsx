@@ -12,6 +12,7 @@ import {
   ChangeRecovery,
   TransferFid,
   PrepareReceive,
+  Cast,
 } from "./actions";
 import { useFarcasterContext, useDelegatorContract, useHatsCheck } from "@/hooks";
 import { truncateAddress } from "@/lib/utils";
@@ -171,7 +172,7 @@ export function DelegatorApp() {
                   {ACTIONS.map((action) => {
                     const canDo = canPerformAction(action.requiredPermission);
                     const needsFid =
-                      ["removeKey", "transferFid", "changeRecovery", "addKey"].includes(
+                      ["removeKey", "transferFid", "changeRecovery", "addKey", "cast"].includes(
                         action.type
                       ) && !delegatorInfo.fid;
                     const hasFid =
@@ -275,6 +276,11 @@ export function DelegatorApp() {
                 <PrepareReceive
                   delegatorAddress={contractAddress}
                   onSuccess={handleRefresh}
+                />
+              )}
+              {selectedAction === "cast" && delegatorInfo.fid && (
+                <Cast
+                  delegatorFid={delegatorInfo.fid}
                 />
               )}
             </div>

@@ -20,7 +20,7 @@ interface NeynarSigner {
   signer_approval_url?: string;
 }
 
-export function AddKey({ delegatorAddress, onSuccess }: AddKeyProps) {
+export function AddKey({ delegatorAddress, delegatorFid, onSuccess }: AddKeyProps) {
   const [status, setStatus] = useState<SignerStatus>("idle");
   const [signer, setSigner] = useState<NeynarSigner | null>(null);
   const [metadata, setMetadata] = useState<string | null>(null);
@@ -140,6 +140,33 @@ export function AddKey({ delegatorAddress, onSuccess }: AddKeyProps) {
     resetWrite();
   };
 
+  // Save signer to localStorage when successful
+  useEffect(() => {
+    if (isSuccess && signer && delegatorFid) {
+      const storageKey = `signers_${delegatorFid.toString()}`;
+      const existing = localStorage.getItem(storageKey);
+      let signers: Array<{ signer_uuid: string; public_key: string; created_at: string }> = [];
+
+      if (existing) {
+        try {
+          signers = JSON.parse(existing);
+        } catch {
+          // Invalid JSON, start fresh
+        }
+      }
+
+      // Add new signer if not already present
+      if (!signers.find(s => s.signer_uuid === signer.signer_uuid)) {
+        signers.push({
+          signer_uuid: signer.signer_uuid,
+          public_key: signer.public_key,
+          created_at: new Date().toISOString(),
+        });
+        localStorage.setItem(storageKey, JSON.stringify(signers));
+      }
+    }
+  }, [isSuccess, signer, delegatorFid]);
+
   if (isSuccess) {
     onSuccess?.();
     return (
@@ -148,9 +175,11 @@ export function AddKey({ delegatorAddress, onSuccess }: AddKeyProps) {
         <p className="text-xs mt-1">Transaction: {hash?.slice(0, 16)}...</p>
         {signer && (
           <>
-            <p className="text-xs mt-2">Signer UUID: {signer.signer_uuid}</p>
-            <p className="text-xs">
-              You can now use this signer with Neynar APIs to cast from this shared account.
+            <p className="text-xs mt-2 font-mono bg-zinc-100 dark:bg-zinc-800 p-2 rounded">
+              Signer UUID: {signer.signer_uuid}
+            </p>
+            <p className="text-xs mt-2">
+              This signer has been saved. You can now use it to cast from the shared account!
             </p>
           </>
         )}

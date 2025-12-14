@@ -27,7 +27,8 @@ export type ActionType =
   | "removeKey"
   | "transferFid"
   | "changeRecovery"
-  | "prepareReceive";
+  | "prepareReceive"
+  | "cast";
 
 export interface ActionConfig {
   type: ActionType;
@@ -72,5 +73,11 @@ export const ACTIONS: ActionConfig[] = [
     label: "Prepare to Receive",
     description: "Prepare contract to receive an existing FID",
     requiredPermission: "owner",
+  },
+  {
+    type: "cast",
+    label: "Cast",
+    description: "Post a cast from the shared account",
+    requiredPermission: "caster",
   },
 ];
