@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useAccount, useConnect } from "wagmi";
 import { ContractInput } from "./ContractInput";
 import { ContractStatus } from "./ContractStatus";
@@ -41,6 +41,18 @@ export function DelegatorApp() {
       casterHat: delegatorInfo?.casterHat,
       enabled: !!delegatorInfo && !!userAddress,
     });
+
+  // Auto-connect wallet when contract is selected
+  useEffect(() => {
+    if (contractAddress && !isConnected) {
+      const farcasterConnector = connectors.find(
+        (c) => c.id === "farcasterMiniApp" || c.id === "farcaster"
+      );
+      if (farcasterConnector) {
+        connect({ connector: farcasterConnector });
+      }
+    }
+  }, [contractAddress, isConnected, connectors, connect]);
 
   const handleContractSubmit = useCallback((address: `0x${string}`) => {
     setContractAddress(address);
