@@ -1,16 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAccount, useWalletClient } from "wagmi";
 import { Button, Input, Card, CardHeader, CardTitle, CardContent, Alert } from "@/components/ui";
 
 interface ChangeUsernameProps {
   fid: bigint;
+  delegatorFid?: bigint;
   currentUsername?: string;
   onSuccess?: () => void;
 }
 
-type UsernameStatus = "idle" | "signing" | "submitting" | "success" | "error";
+interface StoredSigner {
+  signer_uuid: string;
+  public_key: string;
+  created_at: string;
+}
+
+type UsernameStatus = "idle" | "signing" | "submitting" | "broadcasting" | "success" | "error";
 
 // EIP-712 domain for Fname Registry
 const FNAME_DOMAIN = {
@@ -28,13 +35,30 @@ const FNAME_TYPES = {
   ],
 } as const;
 
-export function ChangeUsername({ fid, currentUsername, onSuccess }: ChangeUsernameProps) {
+export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }: ChangeUsernameProps) {
   const [status, setStatus] = useState<UsernameStatus>("idle");
   const [newUsername, setNewUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [signers, setSigners] = useState<StoredSigner[]>([]);
+  const [broadcastSkipped, setBroadcastSkipped] = useState(false);
 
   const { address } = useAccount();
   const { data: walletClient } = useWalletClient();
+
+  // Load stored signers from localStorage
+  useEffect(() => {
+    if (delegatorFid) {
+      const stored = localStorage.getItem(`signers_${delegatorFid.toString()}`);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as StoredSigner[];
+          setSigners(parsed);
+        } catch {
+          // Invalid JSON, ignore
+        }
+      }
+    }
+  }, [delegatorFid]);
 
   const changeUsername = async () => {
     if (!address) {
@@ -99,6 +123,33 @@ export function ChangeUsername({ fid, currentUsername, onSuccess }: ChangeUserna
         throw new Error(data.error || data.message || "Failed to change username");
       }
 
+      // Now broadcast the username update to hubs via Neynar
+      if (signers.length > 0) {
+        setStatus("broadcasting");
+
+        try {
+          const broadcastResponse = await fetch("/api/profile", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              signer_uuid: signers[0].signer_uuid,
+              username: newUsername,
+            }),
+          });
+
+          if (!broadcastResponse.ok) {
+            // Don't fail the whole operation, just note that broadcast failed
+            console.warn("Failed to broadcast username to hubs, but fname registry was updated");
+            setBroadcastSkipped(true);
+          }
+        } catch (broadcastErr) {
+          console.warn("Failed to broadcast username to hubs:", broadcastErr);
+          setBroadcastSkipped(true);
+        }
+      } else {
+        setBroadcastSkipped(true);
+      }
+
       setStatus("success");
       onSuccess?.();
     } catch (err) {
@@ -120,9 +171,16 @@ export function ChangeUsername({ fid, currentUsername, onSuccess }: ChangeUserna
         <CardContent className="py-6">
           <Alert variant="success">
             <p>Username changed to @{newUsername}!</p>
-            <p className="text-xs mt-1">
-              Note: You also need to broadcast a UserDataAdd message to hubs for the change to fully propagate.
-            </p>
+            {broadcastSkipped ? (
+              <p className="text-xs mt-1">
+                Fname registered but broadcast to hubs was skipped (no signer available).
+                The username may take longer to appear in clients.
+              </p>
+            ) : (
+              <p className="text-xs mt-1">
+                Username has been registered and broadcast to Farcaster hubs.
+              </p>
+            )}
           </Alert>
           <div className="mt-4">
             <Button onClick={resetState} variant="ghost" className="w-full">
@@ -176,13 +234,15 @@ export function ChangeUsername({ fid, currentUsername, onSuccess }: ChangeUserna
         <Button
           onClick={changeUsername}
           className="w-full"
-          loading={status === "signing" || status === "submitting"}
+          loading={status === "signing" || status === "submitting" || status === "broadcasting"}
           disabled={!newUsername.trim() || !address}
         >
           {status === "signing"
             ? "Sign in Wallet..."
             : status === "submitting"
-            ? "Submitting..."
+            ? "Registering fname..."
+            : status === "broadcasting"
+            ? "Broadcasting to hubs..."
             : "Change Username"}
         </Button>
 
