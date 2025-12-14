@@ -11,6 +11,7 @@ import {
   RemoveKey,
   ChangeRecovery,
   TransferFid,
+  TransferToWallet,
   PrepareReceive,
   Cast,
   UpdateProfile,
@@ -174,7 +175,7 @@ export function DelegatorApp() {
                   {ACTIONS.map((action) => {
                     const canDo = canPerformAction(action.requiredPermission);
                     const needsFid =
-                      ["removeKey", "transferFid", "changeRecovery", "addKey", "cast", "updateProfile", "changeUsername"].includes(
+                      ["removeKey", "transferFid", "transferToWallet", "changeRecovery", "addKey", "cast", "updateProfile", "changeUsername"].includes(
                         action.type
                       ) && !delegatorInfo.fid;
                     const hasFid =
@@ -269,6 +270,13 @@ export function DelegatorApp() {
               )}
               {selectedAction === "transferFid" && delegatorInfo.fid && (
                 <TransferFid
+                  delegatorAddress={contractAddress}
+                  fid={delegatorInfo.fid}
+                  onSuccess={handleRefresh}
+                />
+              )}
+              {selectedAction === "transferToWallet" && delegatorInfo.fid && (
+                <TransferToWallet
                   delegatorAddress={contractAddress}
                   fid={delegatorInfo.fid}
                   onSuccess={handleRefresh}

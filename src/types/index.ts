@@ -27,6 +27,7 @@ export type ActionType =
   | "addKey"
   | "removeKey"
   | "transferFid"
+  | "transferToWallet"
   | "changeRecovery"
   | "prepareReceive"
   | "cast"
@@ -63,6 +64,12 @@ export const ACTIONS: ActionConfig[] = [
     type: "transferFid",
     label: "Transfer FID",
     description: "Transfer FID ownership to another address",
+    requiredPermission: "owner",
+  },
+  {
+    type: "transferToWallet",
+    label: "Transfer to My Wallet",
+    description: "Transfer FID to your connected wallet",
     requiredPermission: "owner",
   },
   {
