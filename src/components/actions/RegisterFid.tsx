@@ -26,11 +26,15 @@ export function RegisterFid({ delegatorAddress, onSuccess }: RegisterFidProps) {
     data: hash,
     isPending,
     error: writeError,
+    status: writeStatus,
   } = useWriteContract();
 
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+  const { isLoading: isConfirming, isSuccess, error: receiptError } = useWaitForTransactionReceipt({
     hash,
   });
+
+  // Debug logging
+  console.log("RegisterFid state:", { hash, isPending, isConfirming, isSuccess, writeStatus, writeError: writeError?.message, receiptError: receiptError?.message });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,6 +102,19 @@ export function RegisterFid({ delegatorAddress, onSuccess }: RegisterFidProps) {
           {writeError && (
             <Alert variant="error">
               {writeError.message.slice(0, 100)}...
+            </Alert>
+          )}
+
+          {receiptError && (
+            <Alert variant="error">
+              Receipt error: {receiptError.message.slice(0, 100)}...
+            </Alert>
+          )}
+
+          {hash && !isSuccess && (
+            <Alert variant="info">
+              <p className="text-xs">TX submitted: {hash.slice(0, 16)}...</p>
+              <p className="text-xs mt-1">Waiting for confirmation...</p>
             </Alert>
           )}
 
