@@ -125,7 +125,8 @@ echo "Step 5: Deploying HatsFarcasterDelegator via Factory..."
 # Encode immutable args with encodePacked: ownerHat (uint256) + idGateway + idRegistry + keyGateway + keyRegistry + signedKeyRequestValidator
 # IMPORTANT: Must use encodePacked (not padded abi.encode) for HatsModuleFactory
 # uint256 = 32 bytes, address = 20 bytes (packed)
-OWNER_HAT_HEX=$(printf "%064x" $(echo $OWNER_HAT_ID | sed 's/0x//'))
+# Owner hat ID is already 32 bytes hex, just remove 0x prefix
+OWNER_HAT_HEX=$(echo $OWNER_HAT_ID | sed 's/0x//')
 ID_GATEWAY_HEX=$(echo $ID_GATEWAY | sed 's/0x//' | tr '[:upper:]' '[:lower:]')
 ID_REGISTRY_HEX=$(echo $ID_REGISTRY | sed 's/0x//' | tr '[:upper:]' '[:lower:]')
 KEY_GATEWAY_HEX=$(echo $KEY_GATEWAY | sed 's/0x//' | tr '[:upper:]' '[:lower:]')
@@ -154,8 +155,8 @@ fi
 TX_HASH=$(echo $DELEGATOR_RESULT | jq -r '.transactionHash')
 echo "Delegator Deployment TX: $TX_HASH"
 
-# Get the deployed address from the HatsModuleFactory_ModuleDeployed event
-DELEGATOR_ADDRESS=$(cast receipt $TX_HASH --rpc-url $RPC_URL --json | jq -r '.logs[-1].topics[1]' | cast --to-address)
+# Get the deployed address from the first log (the new contract emits an Initialized event)
+DELEGATOR_ADDRESS=$(cast receipt $TX_HASH --rpc-url $RPC_URL --json | jq -r '.logs[0].address')
 
 echo ""
 echo "Step 6: Transferring Top Hat to final owner..."
