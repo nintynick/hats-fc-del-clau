@@ -42,10 +42,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ensure private key has 0x prefix
-    const privateKey = APP_PRIVATE_KEY.startsWith('0x')
-      ? APP_PRIVATE_KEY as `0x${string}`
-      : `0x${APP_PRIVATE_KEY}` as `0x${string}`;
+    // Clean and validate private key
+    // Remove any quotes, whitespace, or newlines that might have been added when pasting
+    let cleanKey = APP_PRIVATE_KEY.trim()
+      .replace(/^["']|["']$/g, '') // Remove surrounding quotes
+      .replace(/\s/g, ''); // Remove any whitespace
+
+    // Ensure 0x prefix
+    if (!cleanKey.startsWith('0x')) {
+      cleanKey = `0x${cleanKey}`;
+    }
+
+    // Validate it's the right length (0x + 64 hex chars = 66 chars)
+    if (cleanKey.length !== 66) {
+      return NextResponse.json(
+        { error: `Invalid private key length: got ${cleanKey.length} chars, expected 66 (0x + 64 hex)` },
+        { status: 500 }
+      );
+    }
+
+    const privateKey = cleanKey as `0x${string}`;
 
     // Create account from private key
     const account = privateKeyToAccount(privateKey);
