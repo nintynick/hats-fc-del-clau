@@ -12,6 +12,7 @@ import {
   ChangeRecovery,
   TransferFid,
   TransferToWallet,
+  TransferToContract,
   PrepareReceive,
   Cast,
   UpdateProfile,
@@ -21,7 +22,7 @@ import { useFarcasterContext, useDelegatorContract, useHatsCheck } from "@/hooks
 import { truncateAddress } from "@/lib/utils";
 import { ID_REGISTRY_ABI } from "@/lib/contracts";
 import { FARCASTER_CONTRACTS } from "@/lib/constants";
-import { ACTIONS, type ActionType } from "@/types";
+import { ACTIONS, ACTION_GROUPS, type ActionType, type ActionGroup } from "@/types";
 
 export function DelegatorApp() {
   const [contractAddress, setContractAddress] = useState<`0x${string}` | null>(null);
@@ -44,7 +45,7 @@ export function DelegatorApp() {
       enabled: !!delegatorInfo && !!userAddress,
     });
 
-  // Fetch FID for connected wallet (for Change Username action)
+  // Fetch FID for connected wallet (for Change Username and Transfer to Contract actions)
   const { data: userFid } = useReadContract({
     address: FARCASTER_CONTRACTS.ID_REGISTRY,
     abi: ID_REGISTRY_ABI,
@@ -73,7 +74,6 @@ export function DelegatorApp() {
   }, []);
 
   const handleConnect = () => {
-    // The official farcaster miniapp connector id is "farcasterMiniApp"
     const farcasterConnector = connectors.find(
       (c) => c.id === "farcasterMiniApp" || c.id === "farcaster"
     );
@@ -83,7 +83,6 @@ export function DelegatorApp() {
   };
 
   const handleRefresh = () => {
-    // Force refetch by resetting and re-setting address
     const addr = contractAddress;
     setContractAddress(null);
     setTimeout(() => setContractAddress(addr), 100);
@@ -94,6 +93,48 @@ export function DelegatorApp() {
     if (requiredPermission === "owner") return isOwner;
     if (requiredPermission === "caster") return isOwner || isCaster;
     return false;
+  };
+
+  const getActionDisabledReason = (actionType: ActionType): string | null => {
+    if (!delegatorInfo) return null;
+
+    const action = ACTIONS.find(a => a.type === actionType);
+    if (!action) return null;
+
+    if (!canPerformAction(action.requiredPermission)) {
+      return `${action.requiredPermission} only`;
+    }
+
+    // Actions that need the CONTRACT to have an FID
+    if (["removeKey", "transferFid", "transferToWallet", "changeRecovery", "addKey", "cast", "updateProfile"].includes(actionType)) {
+      if (!delegatorInfo.fid) return "needs FID";
+    }
+
+    // Transfer to Contract needs user's wallet to have an FID
+    if (actionType === "transferToContract") {
+      if (!userFid || userFid === 0n) return "needs FID in wallet";
+    }
+
+    // Change Username needs the USER'S WALLET to have an FID
+    if (actionType === "changeUsername") {
+      if (!userFid || userFid === 0n) return "needs FID in wallet";
+    }
+
+    // Register only works when contract has NO FID
+    if (actionType === "register" && delegatorInfo.fid) {
+      return "already registered";
+    }
+
+    // prepareReceive and transferToContract only work when contract has NO FID
+    if ((actionType === "prepareReceive" || actionType === "transferToContract") && delegatorInfo.fid) {
+      return "already has FID";
+    }
+
+    return null;
+  };
+
+  const getActionsByGroup = (group: ActionGroup) => {
+    return ACTIONS.filter(action => action.group === group);
   };
 
   // Loading state
@@ -191,78 +232,57 @@ export function DelegatorApp() {
             />
           )}
 
-          {/* Action Selection */}
+          {/* Action Selection - Grouped */}
           {delegatorInfo && permission !== "none" && !selectedAction && (
-            <Card>
-              <CardContent>
-                <h3 className="mb-3 font-semibold">Actions</h3>
-                <div className="space-y-2">
-                  {ACTIONS.map((action) => {
-                    const canDo = canPerformAction(action.requiredPermission);
-                    // Actions that need the CONTRACT to have an FID
-                    const needsContractFid =
-                      ["removeKey", "transferFid", "transferToWallet", "changeRecovery", "addKey", "cast", "updateProfile"].includes(
-                        action.type
-                      ) && !delegatorInfo.fid;
-                    // Change Username needs the USER'S WALLET to have an FID
-                    const needsUserFid =
-                      action.type === "changeUsername" && (!userFid || userFid === 0n);
-                    const hasFid =
-                      action.type === "register" && delegatorInfo.fid;
-                    // prepareReceive only works when contract has NO FID
-                    const cantPrepare =
-                      action.type === "prepareReceive" && delegatorInfo.fid;
+            <div className="space-y-4">
+              {ACTION_GROUPS.map((group) => {
+                const groupActions = getActionsByGroup(group.id);
+                const hasEnabledActions = groupActions.some(
+                  action => !getActionDisabledReason(action.type)
+                );
 
-                    const disabled = !canDo || needsContractFid || needsUserFid || !!hasFid || !!cantPrepare;
+                return (
+                  <Card key={group.id}>
+                    <CardContent>
+                      <h3 className="mb-3 text-sm font-semibold text-zinc-600 dark:text-zinc-400">
+                        {group.label}
+                      </h3>
+                      <div className="space-y-2">
+                        {groupActions.map((action) => {
+                          const disabledReason = getActionDisabledReason(action.type);
+                          const disabled = !!disabledReason;
 
-                    return (
-                      <button
-                        key={action.type}
-                        onClick={() => setSelectedAction(action.type)}
-                        disabled={disabled}
-                        className={`w-full rounded-lg border p-3 text-left transition-colors ${
-                          disabled
-                            ? "cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-500"
-                            : "border-zinc-200 hover:border-violet-300 hover:bg-violet-50 dark:border-zinc-700 dark:hover:border-violet-700 dark:hover:bg-violet-900/20"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{action.label}</span>
-                          {!canDo && (
-                            <span className="text-xs text-zinc-400">
-                              {action.requiredPermission} only
-                            </span>
-                          )}
-                          {needsContractFid && (
-                            <span className="text-xs text-zinc-400">
-                              needs FID
-                            </span>
-                          )}
-                          {needsUserFid && (
-                            <span className="text-xs text-zinc-400">
-                              needs FID in wallet
-                            </span>
-                          )}
-                          {hasFid && (
-                            <span className="text-xs text-zinc-400">
-                              already registered
-                            </span>
-                          )}
-                          {cantPrepare && (
-                            <span className="text-xs text-zinc-400">
-                              already has FID
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-1 text-xs text-zinc-500">
-                          {action.description}
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+                          return (
+                            <button
+                              key={action.type}
+                              onClick={() => setSelectedAction(action.type)}
+                              disabled={disabled}
+                              className={`w-full rounded-lg border p-3 text-left transition-colors ${
+                                disabled
+                                  ? "cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-500"
+                                  : "border-zinc-200 hover:border-violet-300 hover:bg-violet-50 dark:border-zinc-700 dark:hover:border-violet-700 dark:hover:bg-violet-900/20"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium">{action.label}</span>
+                                {disabledReason && (
+                                  <span className="text-xs text-zinc-400">
+                                    {disabledReason}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="mt-1 text-xs text-zinc-500">
+                                {action.description}
+                              </p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           )}
 
           {/* Action Forms */}
@@ -313,6 +333,13 @@ export function DelegatorApp() {
                 <TransferToWallet
                   delegatorAddress={contractAddress}
                   fid={delegatorInfo.fid}
+                  onSuccess={handleRefresh}
+                />
+              )}
+              {selectedAction === "transferToContract" && userFid && userFid > 0n && (
+                <TransferToContract
+                  delegatorAddress={contractAddress}
+                  userFid={userFid}
                   onSuccess={handleRefresh}
                 />
               )}
