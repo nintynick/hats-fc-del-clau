@@ -1,3 +1,4 @@
+// Delegator types and action configurations
 export type Permission = "owner" | "caster" | "none";
 
 export interface DelegatorInfo {
