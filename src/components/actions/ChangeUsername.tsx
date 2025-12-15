@@ -76,22 +76,39 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername: currentUser
   }, [fid, currentUsernameProp]);
 
   // Load stored signers from localStorage (same key as Cast component)
+  // Try delegatorFid first, fall back to fid if no signers found
   useEffect(() => {
+    let foundSigners: StoredSigner[] = [];
+
+    // Try delegatorFid first
     if (delegatorFid) {
       const stored = localStorage.getItem(`signers_${delegatorFid.toString()}`);
       if (stored) {
         try {
-          const parsed = JSON.parse(stored) as StoredSigner[];
-          setSigners(parsed);
-          if (parsed.length > 0) {
-            setSelectedSigner(parsed[0].signer_uuid);
-          }
+          foundSigners = JSON.parse(stored) as StoredSigner[];
         } catch {
           // Invalid JSON, ignore
         }
       }
     }
-  }, [delegatorFid]);
+
+    // Fall back to fid if no signers found with delegatorFid
+    if (foundSigners.length === 0 && fid) {
+      const stored = localStorage.getItem(`signers_${fid.toString()}`);
+      if (stored) {
+        try {
+          foundSigners = JSON.parse(stored) as StoredSigner[];
+        } catch {
+          // Invalid JSON, ignore
+        }
+      }
+    }
+
+    if (foundSigners.length > 0) {
+      setSigners(foundSigners);
+      setSelectedSigner(foundSigners[0].signer_uuid);
+    }
+  }, [delegatorFid, fid]);
 
   // Get the selected signer UUID
   const getSignerUuid = () => selectedSigner;
