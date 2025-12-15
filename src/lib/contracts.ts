@@ -253,13 +253,20 @@ export const KEY_REGISTRY_ABI = [
     inputs: [
       { name: "fid", type: "uint256" },
       { name: "state", type: "uint8" },
+    ],
+    outputs: [{ name: "", type: "bytes[]" }],
+  },
+  {
+    name: "keysOf",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "fid", type: "uint256" },
+      { name: "state", type: "uint8" },
       { name: "startIdx", type: "uint256" },
       { name: "batchSize", type: "uint256" },
     ],
-    outputs: [
-      { name: "", type: "bytes[]" },
-      { name: "", type: "uint32[]" },
-    ],
+    outputs: [{ name: "", type: "bytes[]" }],
   },
   {
     name: "keyDataOf",

@@ -18,43 +18,29 @@ export function ViewKeys({ fid }: ViewKeysProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // First get total number of keys
-  const { data: totalKeys, isLoading: loadingTotal, error: totalError } = useReadContract({
-    address: FARCASTER_CONTRACTS.KEY_REGISTRY,
-    abi: KEY_REGISTRY_ABI,
-    functionName: "totalKeys",
-    args: [fid, KEY_STATE_ADDED],
-  });
-
-  // Then fetch the keys
+  // Fetch all keys directly using the 2-arg version of keysOf
   const { data: keysData, isLoading: loadingKeys, error: keysError, refetch } = useReadContract({
     address: FARCASTER_CONTRACTS.KEY_REGISTRY,
     abi: KEY_REGISTRY_ABI,
     functionName: "keysOf",
-    args: [fid, KEY_STATE_ADDED, 0n, totalKeys || 100n],
-    query: {
-      enabled: totalKeys !== undefined && totalKeys > 0n,
-    },
+    args: [fid, KEY_STATE_ADDED],
   });
 
   useEffect(() => {
-    if (keysData) {
-      const [keysList] = keysData as [readonly `0x${string}`[], readonly number[]];
-      // Convert bytes to hex strings for display
+    if (keysData !== undefined) {
+      // keysOf returns bytes[] directly
+      const keysList = keysData as readonly `0x${string}`[];
       setKeys(keysList ? [...keysList] : []);
       setIsLoading(false);
-    } else if (totalKeys === 0n) {
-      setKeys([]);
-      setIsLoading(false);
     }
-  }, [keysData, totalKeys]);
+  }, [keysData]);
 
   useEffect(() => {
-    if (totalError || keysError) {
-      setError(totalError?.message || keysError?.message || "Failed to fetch keys");
+    if (keysError) {
+      setError(keysError?.message || "Failed to fetch keys");
       setIsLoading(false);
     }
-  }, [totalError, keysError]);
+  }, [keysError]);
 
   const formatKey = (key: string) => {
     if (key.length <= 20) return key;
@@ -65,7 +51,7 @@ export function ViewKeys({ fid }: ViewKeysProps) {
     navigator.clipboard.writeText(text);
   };
 
-  if (loadingTotal || loadingKeys || isLoading) {
+  if (loadingKeys || isLoading) {
     return (
       <Card variant="outline">
         <CardHeader>
