@@ -35,7 +35,7 @@ const FNAME_TYPES = {
   ],
 } as const;
 
-export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }: ChangeUsernameProps) {
+export function ChangeUsername({ fid, delegatorFid, currentUsername: currentUsernameProp, onSuccess }: ChangeUsernameProps) {
   const [status, setStatus] = useState<UsernameStatus>("idle");
   const [newUsername, setNewUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -44,9 +44,38 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
   const [selectedSigner, setSelectedSigner] = useState<string>("");
   const [manualSignerUuid, setManualSignerUuid] = useState("");
   const [useManualSigner, setUseManualSigner] = useState(false);
+  const [fetchedUsername, setFetchedUsername] = useState<string | null>(null);
+  const [loadingUsername, setLoadingUsername] = useState(false);
 
   const { address } = useAccount();
   const { data: walletClient } = useWalletClient();
+
+  // Use prop if provided, otherwise use fetched username
+  const currentUsername = currentUsernameProp || fetchedUsername;
+
+  // Fetch current username for the FID from fname registry
+  useEffect(() => {
+    const fetchUsername = async () => {
+      if (!fid || currentUsernameProp) return; // Skip if prop is provided
+
+      setLoadingUsername(true);
+      try {
+        const response = await fetch(`https://fnames.farcaster.xyz/transfers/current?fid=${fid.toString()}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.transfer?.username) {
+            setFetchedUsername(data.transfer.username);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching username:", err);
+      } finally {
+        setLoadingUsername(false);
+      }
+    };
+
+    fetchUsername();
+  }, [fid, currentUsernameProp]);
 
   // Load stored signers from localStorage (same key as Cast component)
   useEffect(() => {
@@ -348,12 +377,16 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
           </p>
         </Alert>
 
-        {currentUsername && (
-          <div className="rounded-lg bg-zinc-100 p-3 dark:bg-zinc-800">
-            <p className="text-xs text-zinc-500">Current username</p>
+        <div className="rounded-lg bg-zinc-100 p-3 dark:bg-zinc-800">
+          <p className="text-xs text-zinc-500">Current username for FID {fid.toString()}</p>
+          {loadingUsername ? (
+            <p className="font-mono text-zinc-400">Loading...</p>
+          ) : currentUsername ? (
             <p className="font-mono">@{currentUsername}</p>
-          </div>
-        )}
+          ) : (
+            <p className="font-mono text-zinc-400">No username set</p>
+          )}
+        </div>
 
         <Input
           label="New Username"
@@ -390,44 +423,44 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
           Connected: {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Not connected"}
         </p>
 
-        {/* Broadcast existing username to hubs */}
-        {currentUsername && (
-          <div className="border-t border-zinc-200 dark:border-zinc-700 pt-4 mt-4">
-            <p className="text-sm font-medium mb-2">Broadcast Current Username to Hubs</p>
-            <p className="text-xs text-zinc-500 mb-3">
-              If your username (@{currentUsername}) isn&apos;t showing in Farcaster clients,
-              broadcast it to the hubs.
-            </p>
+        {/* Broadcast username to hubs */}
+        <div className="border-t border-zinc-200 dark:border-zinc-700 pt-4 mt-4">
+          <p className="text-sm font-medium mb-2">Broadcast Username to Hubs</p>
+          <p className="text-xs text-zinc-500 mb-3">
+            {currentUsername
+              ? `If your username (@${currentUsername}) isn't showing in Farcaster clients, broadcast it to the hubs.`
+              : "Broadcast a username to the Farcaster hubs to make it visible to clients."}
+          </p>
 
-            <SignerSelector />
+          <SignerSelector />
 
-            {broadcastError && (
-              <Alert variant="error" className="mt-2">
-                {broadcastError}
-              </Alert>
-            )}
+          {broadcastError && (
+            <Alert variant="error" className="mt-2">
+              {broadcastError}
+            </Alert>
+          )}
 
-            {broadcastSuccess && (
-              <Alert variant="success" className="mt-2">
-                Username broadcast successfully!
-              </Alert>
-            )}
+          {broadcastSuccess && (
+            <Alert variant="success" className="mt-2">
+              Username broadcast successfully!
+            </Alert>
+          )}
 
-            <Button
-              onClick={() => broadcastToHubs(currentUsername)}
-              className="w-full mt-2"
-              variant="secondary"
-              loading={isBroadcasting}
-              disabled={
-                signers.length === 0 || useManualSigner
-                  ? !manualSignerUuid.trim()
-                  : !selectedSigner
-              }
-            >
-              {isBroadcasting ? "Broadcasting..." : "Broadcast to Hubs"}
-            </Button>
-          </div>
-        )}
+          <Button
+            onClick={() => broadcastToHubs(currentUsername || newUsername)}
+            className="w-full mt-2"
+            variant="secondary"
+            loading={isBroadcasting}
+            disabled={
+              (!currentUsername && !newUsername.trim()) ||
+              (signers.length === 0 || useManualSigner
+                ? !manualSignerUuid.trim()
+                : !selectedSigner)
+            }
+          >
+            {isBroadcasting ? "Broadcasting..." : `Broadcast ${currentUsername ? `@${currentUsername}` : "Username"} to Hubs`}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
