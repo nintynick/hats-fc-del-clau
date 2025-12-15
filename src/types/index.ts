@@ -26,6 +26,7 @@ export type ActionType =
   | "register"
   | "addKey"
   | "removeKey"
+  | "viewKeys"
   | "transferFid"
   | "transferToWallet"
   | "transferToContract"
@@ -84,6 +85,13 @@ export const ACTIONS: ActionConfig[] = [
     label: "Remove Key",
     description: "Remove a signer key",
     requiredPermission: "owner",
+    group: "keys",
+  },
+  {
+    type: "viewKeys",
+    label: "View Keys",
+    description: "See all active signer keys for this FID",
+    requiredPermission: "caster",
     group: "keys",
   },
   // Hats group - managing hat wearers

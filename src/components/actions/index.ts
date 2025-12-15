@@ -1,6 +1,7 @@
 export { RegisterFid } from "./RegisterFid";
 export { AddKey } from "./AddKey";
 export { RemoveKey } from "./RemoveKey";
+export { ViewKeys } from "./ViewKeys";
 export { ChangeRecovery } from "./ChangeRecovery";
 export { TransferFid } from "./TransferFid";
 export { TransferToWallet } from "./TransferToWallet";

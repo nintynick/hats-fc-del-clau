@@ -9,6 +9,7 @@ import {
   RegisterFid,
   AddKey,
   RemoveKey,
+  ViewKeys,
   ChangeRecovery,
   TransferFid,
   TransferToWallet,
@@ -315,6 +316,11 @@ export function DelegatorApp() {
                 <RemoveKey
                   delegatorAddress={contractAddress}
                   onSuccess={handleRefresh}
+                />
+              )}
+              {selectedAction === "viewKeys" && delegatorInfo.fid && (
+                <ViewKeys
+                  fid={delegatorInfo.fid}
                 />
               )}
               {selectedAction === "changeRecovery" && (

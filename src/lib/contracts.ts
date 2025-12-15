@@ -234,6 +234,48 @@ export const ID_GATEWAY_ABI = [
   },
 ] as const;
 
+// Farcaster KeyRegistry ABI - for viewing keys
+export const KEY_REGISTRY_ABI = [
+  {
+    name: "totalKeys",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "fid", type: "uint256" },
+      { name: "state", type: "uint8" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "keysOf",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "fid", type: "uint256" },
+      { name: "state", type: "uint8" },
+      { name: "startIdx", type: "uint256" },
+      { name: "batchSize", type: "uint256" },
+    ],
+    outputs: [
+      { name: "keys", type: "bytes[]" },
+      { name: "keyTypes", type: "uint8[]" },
+    ],
+  },
+  {
+    name: "keyDataOf",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "fid", type: "uint256" },
+      { name: "key", type: "bytes" },
+    ],
+    outputs: [
+      { name: "state", type: "uint8" },
+      { name: "keyType", type: "uint32" },
+    ],
+  },
+] as const;
+
 // EIP-712 Typehashes used by FarcasterDelegator
 export const TYPEHASHES = {
   REGISTER: "0x" as const, // IdGateway.REGISTER_TYPEHASH()
