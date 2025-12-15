@@ -42,8 +42,6 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername: currentUser
   const [signers, setSigners] = useState<StoredSigner[]>([]);
   const [broadcastSkipped, setBroadcastSkipped] = useState(false);
   const [selectedSigner, setSelectedSigner] = useState<string>("");
-  const [manualSignerUuid, setManualSignerUuid] = useState("");
-  const [useManualSigner, setUseManualSigner] = useState(false);
   const [fetchedUsername, setFetchedUsername] = useState<string | null>(null);
   const [loadingUsername, setLoadingUsername] = useState(false);
 
@@ -95,10 +93,8 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername: currentUser
     }
   }, [delegatorFid]);
 
-  // Get the effective signer UUID (mirrors Cast component pattern)
-  const getSignerUuid = () => {
-    return (signers.length === 0 || useManualSigner) ? manualSignerUuid : selectedSigner;
-  };
+  // Get the selected signer UUID
+  const getSignerUuid = () => selectedSigner;
 
   const changeUsername = async () => {
     if (!address) {
@@ -252,11 +248,11 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername: currentUser
     }
   };
 
-  // Signer selection component (mirrors Cast component pattern)
+  // Signer selection dropdown
   const SignerSelector = () => (
-    <>
-      {signers.length > 0 && !useManualSigner ? (
-        <div className="space-y-2">
+    <div className="space-y-2">
+      {signers.length > 0 ? (
+        <>
           <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Select Signer
           </label>
@@ -271,35 +267,13 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername: currentUser
               </option>
             ))}
           </select>
-          <button
-            type="button"
-            onClick={() => setUseManualSigner(true)}
-            className="text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-          >
-            Enter signer UUID manually
-          </button>
-        </div>
+        </>
       ) : (
-        <div className="space-y-2">
-          <Input
-            label="Signer UUID"
-            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-            value={manualSignerUuid}
-            onChange={(e) => setManualSignerUuid(e.target.value)}
-            hint="The UUID from Neynar when you created the signer"
-          />
-          {signers.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setUseManualSigner(false)}
-              className="text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-            >
-              Select from saved signers
-            </button>
-          )}
-        </div>
+        <Alert variant="warning">
+          <p className="text-xs">No signers found. Add a signer first using the Add Key action.</p>
+        </Alert>
       )}
-    </>
+    </div>
   );
 
   // Success state
@@ -339,11 +313,7 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername: currentUser
                   onClick={() => broadcastToHubs(newUsername)}
                   className="w-full mt-2"
                   loading={isBroadcasting}
-                  disabled={
-                    signers.length === 0 || useManualSigner
-                      ? !manualSignerUuid.trim()
-                      : !selectedSigner
-                  }
+                  disabled={!selectedSigner}
                 >
                   {isBroadcasting ? "Broadcasting..." : "Broadcast to Hubs"}
                 </Button>
@@ -452,10 +422,7 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername: currentUser
             variant="secondary"
             loading={isBroadcasting}
             disabled={
-              (!currentUsername && !newUsername.trim()) ||
-              (signers.length === 0 || useManualSigner
-                ? !manualSignerUuid.trim()
-                : !selectedSigner)
+              (!currentUsername && !newUsername.trim()) || !selectedSigner
             }
           >
             {isBroadcasting ? "Broadcasting..." : `Broadcast ${currentUsername ? `@${currentUsername}` : "Username"} to Hubs`}
