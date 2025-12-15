@@ -39,8 +39,9 @@ export function ViewKeys({ fid }: ViewKeysProps) {
 
   useEffect(() => {
     if (keysData) {
-      const [keysList] = keysData as [string[], number[]];
-      setKeys(keysList || []);
+      const [keysList] = keysData as [readonly `0x${string}`[], readonly number[]];
+      // Convert bytes to hex strings for display
+      setKeys(keysList ? [...keysList] : []);
       setIsLoading(false);
     } else if (totalKeys === 0n) {
       setKeys([]);

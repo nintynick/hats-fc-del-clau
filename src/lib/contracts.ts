@@ -257,8 +257,8 @@ export const KEY_REGISTRY_ABI = [
       { name: "batchSize", type: "uint256" },
     ],
     outputs: [
-      { name: "keys", type: "bytes[]" },
-      { name: "keyTypes", type: "uint8[]" },
+      { name: "", type: "bytes[]" },
+      { name: "", type: "uint32[]" },
     ],
   },
   {
