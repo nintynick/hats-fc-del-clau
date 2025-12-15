@@ -41,11 +41,14 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
   const [error, setError] = useState<string | null>(null);
   const [signers, setSigners] = useState<StoredSigner[]>([]);
   const [broadcastSkipped, setBroadcastSkipped] = useState(false);
+  const [selectedSigner, setSelectedSigner] = useState<string>("");
+  const [manualSignerUuid, setManualSignerUuid] = useState("");
+  const [useManualSigner, setUseManualSigner] = useState(false);
 
   const { address } = useAccount();
   const { data: walletClient } = useWalletClient();
 
-  // Load stored signers from localStorage
+  // Load stored signers from localStorage (same key as Cast component)
   useEffect(() => {
     if (delegatorFid) {
       const stored = localStorage.getItem(`signers_${delegatorFid.toString()}`);
@@ -53,12 +56,20 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
         try {
           const parsed = JSON.parse(stored) as StoredSigner[];
           setSigners(parsed);
+          if (parsed.length > 0) {
+            setSelectedSigner(parsed[0].signer_uuid);
+          }
         } catch {
           // Invalid JSON, ignore
         }
       }
     }
   }, [delegatorFid]);
+
+  // Get the effective signer UUID (mirrors Cast component pattern)
+  const getSignerUuid = () => {
+    return (signers.length === 0 || useManualSigner) ? manualSignerUuid : selectedSigner;
+  };
 
   const changeUsername = async () => {
     if (!address) {
@@ -124,7 +135,8 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
       }
 
       // Now broadcast the username update to hubs via Neynar
-      if (signers.length > 0) {
+      const signerUuid = getSignerUuid();
+      if (signerUuid && signerUuid.trim()) {
         setStatus("broadcasting");
 
         try {
@@ -132,7 +144,7 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              signer_uuid: signers[0].signer_uuid,
+              signer_uuid: signerUuid,
               username: newUsername,
             }),
           });
@@ -165,16 +177,15 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
     setBroadcastSkipped(false);
   };
 
-  const [manualSignerUuid, setManualSignerUuid] = useState("");
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [broadcastSuccess, setBroadcastSuccess] = useState(false);
   const [broadcastError, setBroadcastError] = useState<string | null>(null);
 
   const broadcastToHubs = async (usernameTobroadcast: string) => {
-    const signerUuid = signers.length > 0 ? signers[0].signer_uuid : manualSignerUuid;
+    const signerUuid = getSignerUuid();
 
-    if (!signerUuid.trim()) {
-      setBroadcastError("Please enter a signer UUID");
+    if (!signerUuid || !signerUuid.trim()) {
+      setBroadcastError("Please enter or select a signer UUID");
       return;
     }
 
@@ -212,6 +223,56 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
     }
   };
 
+  // Signer selection component (mirrors Cast component pattern)
+  const SignerSelector = () => (
+    <>
+      {signers.length > 0 && !useManualSigner ? (
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Select Signer
+          </label>
+          <select
+            value={selectedSigner}
+            onChange={(e) => setSelectedSigner(e.target.value)}
+            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+          >
+            {signers.map((signer) => (
+              <option key={signer.signer_uuid} value={signer.signer_uuid}>
+                {signer.signer_uuid.slice(0, 8)}... (added {new Date(signer.created_at).toLocaleDateString()})
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => setUseManualSigner(true)}
+            className="text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          >
+            Enter signer UUID manually
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <Input
+            label="Signer UUID"
+            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            value={manualSignerUuid}
+            onChange={(e) => setManualSignerUuid(e.target.value)}
+            hint="The UUID from Neynar when you created the signer"
+          />
+          {signers.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setUseManualSigner(false)}
+              className="text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+            >
+              Select from saved signers
+            </button>
+          )}
+        </div>
+      )}
+    </>
+  );
+
   // Success state
   if (status === "success") {
     return (
@@ -236,19 +297,8 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
             <div className="mt-4 space-y-3">
               <div className="border-t border-zinc-200 dark:border-zinc-700 pt-4">
                 <p className="text-sm font-medium mb-2">Broadcast to Hubs</p>
-                {signers.length > 0 ? (
-                  <p className="text-xs text-zinc-500 mb-2">
-                    Using signer: {signers[0].signer_uuid.slice(0, 12)}...
-                  </p>
-                ) : (
-                  <Input
-                    label="Signer UUID"
-                    placeholder="Enter your signer UUID"
-                    value={manualSignerUuid}
-                    onChange={(e) => setManualSignerUuid(e.target.value)}
-                    hint="From Neynar or stored signer"
-                  />
-                )}
+
+                <SignerSelector />
 
                 {broadcastError && (
                   <Alert variant="error" className="mt-2">
@@ -260,7 +310,11 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
                   onClick={() => broadcastToHubs(newUsername)}
                   className="w-full mt-2"
                   loading={isBroadcasting}
-                  disabled={signers.length === 0 && !manualSignerUuid.trim()}
+                  disabled={
+                    signers.length === 0 || useManualSigner
+                      ? !manualSignerUuid.trim()
+                      : !selectedSigner
+                  }
                 >
                   {isBroadcasting ? "Broadcasting..." : "Broadcast to Hubs"}
                 </Button>
@@ -345,19 +399,7 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
               broadcast it to the hubs.
             </p>
 
-            {signers.length > 0 ? (
-              <p className="text-xs text-zinc-500 mb-2">
-                Using signer: {signers[0].signer_uuid.slice(0, 12)}...
-              </p>
-            ) : (
-              <Input
-                label="Signer UUID"
-                placeholder="Enter your signer UUID"
-                value={manualSignerUuid}
-                onChange={(e) => setManualSignerUuid(e.target.value)}
-                hint="From Neynar or stored signer"
-              />
-            )}
+            <SignerSelector />
 
             {broadcastError && (
               <Alert variant="error" className="mt-2">
@@ -376,7 +418,11 @@ export function ChangeUsername({ fid, delegatorFid, currentUsername, onSuccess }
               className="w-full mt-2"
               variant="secondary"
               loading={isBroadcasting}
-              disabled={signers.length === 0 && !manualSignerUuid.trim()}
+              disabled={
+                signers.length === 0 || useManualSigner
+                  ? !manualSignerUuid.trim()
+                  : !selectedSigner
+              }
             >
               {isBroadcasting ? "Broadcasting..." : "Broadcast to Hubs"}
             </Button>

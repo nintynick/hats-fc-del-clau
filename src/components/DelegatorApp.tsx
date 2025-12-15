@@ -364,7 +364,7 @@ export function DelegatorApp() {
               {selectedAction === "changeUsername" && userFid && userFid > 0n && (
                 <ChangeUsername
                   fid={userFid}
-                  delegatorFid={delegatorInfo.fid}
+                  delegatorFid={delegatorInfo.fid ?? undefined}
                   onSuccess={handleRefresh}
                 />
               )}
